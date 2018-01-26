@@ -1,8 +1,14 @@
 #!/usr/bin/python3
 import usb
 import usb.core
+import sqlite3
 from struct import pack
-from time import sleep,asctime
+from time import sleep,asctime,time
+
+db = sqlite3.connect('hyg-usb.db')
+c = db.cursor()
+
+c.execute("CREATE TABLE IF NOT EXISTS th (time int PRIMARY KEY,sensor_id int,temp int,humidity int)")
 
 LED_ON = 65
 LED_OFF = 66
@@ -33,9 +39,12 @@ class Hyg():
         t = round(175.72 * ((packed[2] << 8) + packed[3]) / 65536.0 - 46.85,2)
         return(t,h)
         
-    def read_string(self):
+    def read_string(self,store = True):
         #Gets sensor values as a text string
         r = self.read_dec()
+        if(store): 
+            c.execute("INSERT INTO th VALUES(?,?,?,?)",(int(time()),1,r[0],r[1]))
+            db.commit()
         return "Temp: " + str(r[0]) + " degrees C" + "\nHyg: " + str(r[1]) +"%"
 
 #Find USB device - probably doesn't work for more than 1 device
@@ -54,4 +63,5 @@ if __name__ == "__main__":
     a = Hyg(get_dev())
     while(1):
         print(a.read_string())
-        sleep(10)
+        sleep(30)
+
